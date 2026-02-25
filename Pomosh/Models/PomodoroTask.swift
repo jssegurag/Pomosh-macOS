@@ -54,6 +54,25 @@ class PomodoroTask {
         uid ?? "\(Int(createdAt.timeIntervalSince1970))"
     }
 
+    /// Total seconds invested in this task (completed pomodoros × work duration)
+    var totalSecondsSpent: Int {
+        pomodorosCompleted * workDuration
+    }
+
+    /// Human-readable time: "45min" if < 1h, "1h 20min" or "2h" if ≥ 1h
+    var timeSpentDisplay: String {
+        let total = totalSecondsSpent
+        guard total > 0 else { return "" }
+        let minutes = total / 60
+        if minutes < 60 {
+            return "\(minutes)min"
+        } else {
+            let hours = minutes / 60
+            let rem   = minutes % 60
+            return rem == 0 ? "\(hours)h" : "\(hours)h \(rem)min"
+        }
+    }
+
     init(title: String, notes: String = "") {
         self.uid = UUID().uuidString
         self.title = title

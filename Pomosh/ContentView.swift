@@ -175,21 +175,29 @@ struct ContentView: View {
                             (NSApp.delegate as! AppDelegate).updateIcon(iconName: String("Coffee"))
                             (NSApp.delegate as! AppDelegate).updateTitle(newTitle: String(self.ThePomoshTimer.textForPlaybackTime(time: TimeInterval(self.ThePomoshTimer.timeRemaining))))
                         }
-
                     } else {
                         if self.ThePomoshTimer.showMenubarTimer == true {
                             (NSApp.delegate as! AppDelegate).updateIcon(iconName: String("Work"))
                             (NSApp.delegate as! AppDelegate).updateTitle(newTitle: String(self.ThePomoshTimer.textForPlaybackTime(time: TimeInterval(self.ThePomoshTimer.timeRemaining))))
                         }
                     }
+
+                    // Countdown ticks: 5 seconds before end
+                    if self.ThePomoshTimer.playSound &&
+                       self.ThePomoshTimer.round > 0 &&
+                       self.ThePomoshTimer.timeRemaining >= 2 &&
+                       self.ThePomoshTimer.timeRemaining <= 5 {
+                        NSSound(named: "Tink")?.play()
+                    }
                 }
 
-                //  if self.ThePomoshTimer.playSound && self.ThePomoshTimer.timeRemaining == 7 && self.ThePomoshTimer.round > 0 {
-                //      NSSound(named: "before")?.play()
-                //  }
                 if self.ThePomoshTimer.timeRemaining == 1 && self.ThePomoshTimer.round > 0 {
                     if self.ThePomoshTimer.playSound {
-                        NSSound(named: "done2")?.play()
+                        // Friendly alarm: plays twice for emphasis
+                        NSSound(named: "Glass")?.play()
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.6) {
+                            NSSound(named: "Glass")?.play()
+                        }
                     }
 
                     if self.ThePomoshTimer.showNotifications {

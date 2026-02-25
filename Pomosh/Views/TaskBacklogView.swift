@@ -21,6 +21,9 @@ struct TaskBacklogView: View {
     @State private var newBreakDuration: Double = 600
     @State private var newCycles: Double = 5
     @State private var dropTargetStatus: TaskStatus? = nil
+    @State private var editingTaskID: String? = nil
+    @State private var editingTitle: String = ""
+    @State private var isListView: Bool = false
 
     private let statuses: [TaskStatus] = [.backlog, .inProgress, .blocked, .done]
 
@@ -35,6 +38,17 @@ struct TaskBacklogView: View {
                 Text("Tasks")
                     .font(.custom("Space Mono Regular", size: 18))
                 Spacer()
+                // View toggle
+                Button(action: {
+                    withAnimation(.spring(response: 0.3)) { isListView.toggle() }
+                }) {
+                    Image(systemName: isListView ? "square.grid.2x2" : "list.bullet")
+                        .font(.system(size: 14))
+                        .foregroundColor(.secondary)
+                }
+                .buttonStyle(.plain)
+                .padding(.trailing, 6)
+
                 Button(action: {
                     if !showAddForm {
                         newWorkDuration = Double(UserDefaults.standard.optionalInt(forKey: "time") ?? 1200)
@@ -61,14 +75,21 @@ struct TaskBacklogView: View {
                     .transition(.move(edge: .top).combined(with: .opacity))
             }
 
-            // ── Kanban board ─────────────────────────────────────
-            HStack(alignment: .top, spacing: 6) {
-                ForEach(statuses, id: \.self) { status in
-                    kanbanColumn(status)
+            // ── Kanban / List ─────────────────────────────────────
+            if isListView {
+                listView
+                    .frame(maxHeight: .infinity)
+                    .transition(.opacity)
+            } else {
+                HStack(alignment: .top, spacing: 6) {
+                    ForEach(statuses, id: \.self) { status in
+                        kanbanColumn(status)
+                    }
                 }
+                .padding(.horizontal, 10)
+                .frame(maxHeight: .infinity)
+                .transition(.opacity)
             }
-            .padding(.horizontal, 10)
-            .frame(maxHeight: .infinity)
 
             // ── Footer ───────────────────────────────────────────
             HStack {
@@ -86,6 +107,137 @@ struct TaskBacklogView: View {
             }
             .padding(.horizontal, 14)
             .padding(.vertical, 8)
+        }
+    }
+
+    // MARK: - List View
+
+    private var allTasksSorted: [PomodoroTask] {
+        tasks.sorted {
+            if $0.status.sortPriority != $1.status.sortPriority {
+                return $0.status.sortPriority < $1.status.sortPriority
+            }
+            return $0.createdAt < $1.createdAt
+        }
+    }
+
+    @ViewBuilder
+    private var listView: some View {
+        ScrollView(.vertical, showsIndicators: false) {
+            LazyVStack(spacing: 0, pinnedViews: .sectionHeaders) {
+                ForEach(statuses, id: \.self) { status in
+                    let group = tasksFor(status)
+                    if !group.isEmpty {
+                        Section {
+                            ForEach(group) { task in
+                                listRow(task, status: status)
+                                    .padding(.horizontal, 14)
+                            }
+                        } header: {
+                            HStack(spacing: 5) {
+                                Image(systemName: status.icon)
+                                    .font(.system(size: 9, weight: .semibold))
+                                    .foregroundColor(statusColor(status))
+                                Text(columnLabel(status))
+                                    .font(.system(size: 9, weight: .semibold))
+                                    .foregroundColor(.secondary)
+                                Text("\(group.count)")
+                                    .font(.system(size: 8, weight: .bold, design: .monospaced))
+                                    .foregroundColor(statusColor(status))
+                                    .padding(.horizontal, 4)
+                                    .padding(.vertical, 1)
+                                    .background(statusColor(status).opacity(0.15))
+                                    .clipShape(Capsule())
+                                Spacer()
+                            }
+                            .padding(.horizontal, 14)
+                            .padding(.vertical, 5)
+                            .background(.ultraThinMaterial)
+                        }
+                    }
+                }
+            }
+            .padding(.bottom, 4)
+        }
+    }
+
+    @ViewBuilder
+    private func listRow(_ task: PomodoroTask, status: TaskStatus) -> some View {
+        let isActive = task.persistentModelID == activeTask?.persistentModelID
+        let isDone = status == .done
+        let color = statusColor(status)
+
+        HStack(spacing: 8) {
+            // Status dot
+            Circle()
+                .fill(color)
+                .frame(width: 6, height: 6)
+
+            // Title (editable on double-click)
+            if editingTaskID == task.dragID {
+                TextField("", text: $editingTitle)
+                    .textFieldStyle(.plain)
+                    .font(.system(size: 11, weight: .medium))
+                    .onSubmit { commitEdit(task) }
+                    .onExitCommand { editingTaskID = nil }
+            } else {
+                Text(task.title)
+                    .font(.system(size: 11, weight: .medium))
+                    .strikethrough(isDone)
+                    .foregroundColor(isDone ? .secondary : .primary)
+                    .lineLimit(1)
+                    .onTapGesture(count: 2) {
+                        editingTaskID = task.dragID
+                        editingTitle = task.title
+                    }
+            }
+
+            Spacer()
+
+            // Duration + time invested
+            VStack(alignment: .trailing, spacing: 1) {
+                Text("\(task.workDuration / 60)m · \(task.cycles)c")
+                    .font(.system(size: 8, design: .monospaced))
+                    .foregroundColor(.secondary)
+                if !task.timeSpentDisplay.isEmpty {
+                    Text(task.timeSpentDisplay)
+                        .font(.system(size: 8, weight: .semibold, design: .monospaced))
+                        .foregroundColor(color.opacity(0.8))
+                }
+            }
+
+            // Play button
+            if status == .backlog || status == .inProgress {
+                Button(action: { onStartTask(task) }) {
+                    Image(systemName: isActive ? "play.fill" : "play")
+                        .font(.system(size: 10))
+                        .foregroundColor(isActive ? color : .secondary.opacity(0.5))
+                }
+                .buttonStyle(.plain)
+            }
+        }
+        .padding(.vertical, 7)
+        .padding(.horizontal, 8)
+        .background(
+            RoundedRectangle(cornerRadius: 6)
+                .fill(isActive ? color.opacity(0.1) : Color.white.opacity(0.03))
+        )
+        .opacity(isDone ? 0.55 : 1)
+        .padding(.vertical, 2)
+        .contextMenu {
+            ForEach(TaskStatus.allCases, id: \.self) { s in
+                Button(action: {
+                    task.status = s
+                    if s == .done { task.completedAt = Date() }
+                    try? modelContext.save()
+                }) {
+                    Label(s.rawValue, systemImage: s.icon)
+                }
+            }
+            Divider()
+            Button(role: .destructive, action: { modelContext.delete(task) }) {
+                Label("Delete", systemImage: "trash")
+            }
         }
     }
 
@@ -178,16 +330,33 @@ struct TaskBacklogView: View {
         let isDone = status == .done
 
         VStack(alignment: .leading, spacing: 3) {
-            Text(task.title)
-                .font(.system(size: 9, weight: .medium))
-                .lineLimit(3)
-                .strikethrough(isDone)
-                .foregroundColor(isDone ? .secondary : .primary)
+            if editingTaskID == task.dragID {
+                TextField("", text: $editingTitle)
+                    .textFieldStyle(.plain)
+                    .font(.system(size: 9, weight: .medium))
+                    .onSubmit { commitEdit(task) }
+                    .onExitCommand { editingTaskID = nil }
+            } else {
+                Text(task.title)
+                    .font(.system(size: 9, weight: .medium))
+                    .lineLimit(3)
+                    .strikethrough(isDone)
+                    .foregroundColor(isDone ? .secondary : .primary)
+                    .onTapGesture(count: 2) {
+                        editingTaskID = task.dragID
+                        editingTitle = task.title
+                    }
+            }
 
             HStack(spacing: 0) {
                 Text("\(task.workDuration / 60)m")
                     .font(.system(size: 7, design: .monospaced))
                     .foregroundColor(.secondary)
+                if !task.timeSpentDisplay.isEmpty {
+                    Text(" · \(task.timeSpentDisplay)")
+                        .font(.system(size: 7, design: .monospaced))
+                        .foregroundColor(color.opacity(0.8))
+                }
                 Spacer(minLength: 0)
                 if status == .backlog || status == .inProgress {
                     Button(action: { onStartTask(task) }) {
@@ -314,6 +483,15 @@ struct TaskBacklogView: View {
         case .blocked:    return .red
         case .done:       return .green
         }
+    }
+
+    private func commitEdit(_ task: PomodoroTask) {
+        let trimmed = editingTitle.trimmingCharacters(in: .whitespaces)
+        if !trimmed.isEmpty {
+            task.title = trimmed
+            try? modelContext.save()
+        }
+        editingTaskID = nil
     }
 
     private func saveNewTask() {
