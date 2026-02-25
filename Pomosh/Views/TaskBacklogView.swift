@@ -23,6 +23,9 @@ struct TaskBacklogView: View {
     @State private var dropTargetStatus: TaskStatus? = nil
     @State private var editingTaskID: String? = nil
     @State private var editingTitle: String = ""
+    @State private var editingWorkDuration: Double = 1200
+    @State private var editingBreakDuration: Double = 600
+    @State private var editingCycles: Double = 5
     @State private var isListView: Bool = false
 
     private let statuses: [TaskStatus] = [.backlog, .inProgress, .blocked, .done]
@@ -167,53 +170,84 @@ struct TaskBacklogView: View {
         let isDone = status == .done
         let color = statusColor(status)
 
-        HStack(spacing: 8) {
-            // Status dot
-            Circle()
-                .fill(color)
-                .frame(width: 6, height: 6)
+        VStack(alignment: .leading, spacing: 6) {
+            HStack(spacing: 8) {
+                Circle()
+                    .fill(color)
+                    .frame(width: 6, height: 6)
 
-            // Title (editable on double-click)
-            if editingTaskID == task.dragID {
-                TextField("", text: $editingTitle)
-                    .textFieldStyle(.plain)
-                    .font(.system(size: 11, weight: .medium))
-                    .onSubmit { commitEdit(task) }
-                    .onExitCommand { editingTaskID = nil }
-            } else {
-                Text(task.title)
-                    .font(.system(size: 11, weight: .medium))
-                    .strikethrough(isDone)
-                    .foregroundColor(isDone ? .secondary : .primary)
-                    .lineLimit(1)
-                    .onTapGesture(count: 2) {
-                        editingTaskID = task.dragID
-                        editingTitle = task.title
+                if editingTaskID == task.dragID {
+                    TextField("", text: $editingTitle)
+                        .textFieldStyle(.plain)
+                        .font(.system(size: 11, weight: .medium))
+                        .onSubmit { commitEdit(task) }
+                        .onExitCommand { editingTaskID = nil }
+                } else {
+                    Text(task.title)
+                        .font(.system(size: 11, weight: .medium))
+                        .strikethrough(isDone)
+                        .foregroundColor(isDone ? .secondary : .primary)
+                        .lineLimit(1)
+                        .onTapGesture(count: 2) {
+                            editingTaskID = task.dragID
+                            editingTitle = task.title
+                            editingWorkDuration = Double(task.workDuration)
+                            editingBreakDuration = Double(task.breakDuration)
+                            editingCycles = Double(task.cycles)
+                        }
+                }
+
+                Spacer()
+
+                if editingTaskID != task.dragID {
+                    VStack(alignment: .trailing, spacing: 1) {
+                        Text("\(task.workDuration / 60)m · \(task.cycles)c")
+                            .font(.system(size: 8, design: .monospaced))
+                            .foregroundColor(.secondary)
+                        if !task.timeSpentDisplay.isEmpty {
+                            Text(task.timeSpentDisplay)
+                                .font(.system(size: 8, weight: .semibold, design: .monospaced))
+                                .foregroundColor(color.opacity(0.8))
+                        }
                     }
-            }
 
-            Spacer()
-
-            // Duration + time invested
-            VStack(alignment: .trailing, spacing: 1) {
-                Text("\(task.workDuration / 60)m · \(task.cycles)c")
-                    .font(.system(size: 8, design: .monospaced))
-                    .foregroundColor(.secondary)
-                if !task.timeSpentDisplay.isEmpty {
-                    Text(task.timeSpentDisplay)
-                        .font(.system(size: 8, weight: .semibold, design: .monospaced))
-                        .foregroundColor(color.opacity(0.8))
+                    if status == .backlog || status == .inProgress {
+                        Button(action: { onStartTask(task) }) {
+                            Image(systemName: isActive ? "play.fill" : "play")
+                                .font(.system(size: 10))
+                                .foregroundColor(isActive ? color : .secondary.opacity(0.5))
+                        }
+                        .buttonStyle(.plain)
+                    }
                 }
             }
 
-            // Play button
-            if status == .backlog || status == .inProgress {
-                Button(action: { onStartTask(task) }) {
-                    Image(systemName: isActive ? "play.fill" : "play")
-                        .font(.system(size: 10))
-                        .foregroundColor(isActive ? color : .secondary.opacity(0.5))
+            if editingTaskID == task.dragID {
+                HStack(spacing: 10) {
+                    sliderField(label: "Work", value: $editingWorkDuration,
+                                display: "\(Int(editingWorkDuration)/60)m",
+                                range: 300...3600, step: 300)
+                    sliderField(label: "Break", value: $editingBreakDuration,
+                                display: "\(Int(editingBreakDuration)/60)m",
+                                range: 300...1200, step: 60)
+                    sliderField(label: "Cycles", value: $editingCycles,
+                                display: "\(Int(editingCycles))",
+                                range: 1...8, step: 1)
                 }
-                .buttonStyle(.plain)
+                HStack(spacing: 10) {
+                    Button(action: { commitEdit(task) }) {
+                        Text("Save")
+                            .font(.system(size: 9, weight: .semibold))
+                            .foregroundColor(color)
+                    }
+                    .buttonStyle(.plain)
+                    Button(action: { editingTaskID = nil }) {
+                        Text("Cancel")
+                            .font(.system(size: 9))
+                            .foregroundColor(.secondary)
+                    }
+                    .buttonStyle(.plain)
+                }
             }
         }
         .padding(.vertical, 7)
@@ -329,14 +363,41 @@ struct TaskBacklogView: View {
         let isActive = task.persistentModelID == activeTask?.persistentModelID
         let isDone = status == .done
 
-        VStack(alignment: .leading, spacing: 3) {
+        VStack(alignment: .leading, spacing: 4) {
             if editingTaskID == task.dragID {
+                // ── Edit mode ──────────────────────────────────
                 TextField("", text: $editingTitle)
                     .textFieldStyle(.plain)
                     .font(.system(size: 9, weight: .medium))
                     .onSubmit { commitEdit(task) }
                     .onExitCommand { editingTaskID = nil }
+
+                sliderField(label: "Work", value: $editingWorkDuration,
+                            display: "\(Int(editingWorkDuration)/60)m",
+                            range: 300...3600, step: 300)
+                sliderField(label: "Break", value: $editingBreakDuration,
+                            display: "\(Int(editingBreakDuration)/60)m",
+                            range: 300...1200, step: 60)
+                sliderField(label: "Cycles", value: $editingCycles,
+                            display: "\(Int(editingCycles))",
+                            range: 1...8, step: 1)
+
+                HStack(spacing: 6) {
+                    Button(action: { commitEdit(task) }) {
+                        Text("Save")
+                            .font(.system(size: 8, weight: .semibold))
+                            .foregroundColor(color)
+                    }
+                    .buttonStyle(.plain)
+                    Button(action: { editingTaskID = nil }) {
+                        Text("Cancel")
+                            .font(.system(size: 8))
+                            .foregroundColor(.secondary)
+                    }
+                    .buttonStyle(.plain)
+                }
             } else {
+                // ── Display mode ────────────────────────────────
                 Text(task.title)
                     .font(.system(size: 9, weight: .medium))
                     .lineLimit(3)
@@ -345,26 +406,29 @@ struct TaskBacklogView: View {
                     .onTapGesture(count: 2) {
                         editingTaskID = task.dragID
                         editingTitle = task.title
+                        editingWorkDuration = Double(task.workDuration)
+                        editingBreakDuration = Double(task.breakDuration)
+                        editingCycles = Double(task.cycles)
                     }
-            }
 
-            HStack(spacing: 0) {
-                Text("\(task.workDuration / 60)m")
-                    .font(.system(size: 7, design: .monospaced))
-                    .foregroundColor(.secondary)
-                if !task.timeSpentDisplay.isEmpty {
-                    Text(" · \(task.timeSpentDisplay)")
+                HStack(spacing: 0) {
+                    Text("\(task.workDuration / 60)m")
                         .font(.system(size: 7, design: .monospaced))
-                        .foregroundColor(color.opacity(0.8))
-                }
-                Spacer(minLength: 0)
-                if status == .backlog || status == .inProgress {
-                    Button(action: { onStartTask(task) }) {
-                        Image(systemName: isActive ? "play.fill" : "play")
-                            .font(.system(size: 8))
-                            .foregroundColor(isActive ? color : .secondary.opacity(0.5))
+                        .foregroundColor(.secondary)
+                    if !task.timeSpentDisplay.isEmpty {
+                        Text(" · \(task.timeSpentDisplay)")
+                            .font(.system(size: 7, design: .monospaced))
+                            .foregroundColor(color.opacity(0.8))
                     }
-                    .buttonStyle(.plain)
+                    Spacer(minLength: 0)
+                    if status == .backlog || status == .inProgress {
+                        Button(action: { onStartTask(task) }) {
+                            Image(systemName: isActive ? "play.fill" : "play")
+                                .font(.system(size: 8))
+                                .foregroundColor(isActive ? color : .secondary.opacity(0.5))
+                        }
+                        .buttonStyle(.plain)
+                    }
                 }
             }
         }
@@ -430,7 +494,7 @@ struct TaskBacklogView: View {
             HStack(spacing: 10) {
                 sliderField(label: "Work", value: $newWorkDuration,
                             display: "\(Int(newWorkDuration)/60)m",
-                            range: 600...3600, step: 300)
+                            range: 300...3600, step: 300)
                 sliderField(label: "Break", value: $newBreakDuration,
                             display: "\(Int(newBreakDuration)/60)m",
                             range: 300...1200, step: 60)
@@ -489,6 +553,9 @@ struct TaskBacklogView: View {
         let trimmed = editingTitle.trimmingCharacters(in: .whitespaces)
         if !trimmed.isEmpty {
             task.title = trimmed
+            task.workDuration = Int(editingWorkDuration)
+            task.breakDuration = Int(editingBreakDuration)
+            task.cycles = Int(editingCycles)
             try? modelContext.save()
         }
         editingTaskID = nil

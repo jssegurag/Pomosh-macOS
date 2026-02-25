@@ -84,6 +84,23 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         statusBarItem.button?.image = NSImage(named: iconName)
     }
 
+    func showPopover() {
+        guard !popover.isShown,
+              let sbutton = statusBarItem.button,
+              let window = sbutton.window else { return }
+        let buttonRect: NSRect = sbutton.convert(sbutton.bounds, to: nil)
+        let screenRect: NSRect = window.convertToScreen(buttonRect)
+        let posX = screenRect.origin.x + (screenRect.width / 2) - 10
+        let posY = screenRect.origin.y
+        invisibleWindow.setFrameOrigin(NSPoint(x: posX, y: posY))
+        invisibleWindow.makeKeyAndOrderFront(self)
+        NSApplication.shared.presentationOptions = []
+        popover.show(relativeTo: invisibleWindow.contentView!.frame,
+                     of: invisibleWindow.contentView!,
+                     preferredEdge: NSRectEdge.minY)
+        NSApp.activate(ignoringOtherApps: true)
+    }
+
     @objc func togglePopover(_ sender: AnyObject?) {
         let event = NSApp.currentEvent!
 

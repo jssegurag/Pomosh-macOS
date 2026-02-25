@@ -182,12 +182,16 @@ struct ContentView: View {
                         }
                     }
 
-                    // Countdown ticks: 5 seconds before end
-                    if self.ThePomoshTimer.playSound &&
-                       self.ThePomoshTimer.round > 0 &&
-                       self.ThePomoshTimer.timeRemaining >= 2 &&
-                       self.ThePomoshTimer.timeRemaining <= 5 {
-                        NSSound(named: "Tink")?.play()
+                    // Auto-show popover + countdown ticks for last 5 seconds
+                    if self.ThePomoshTimer.round > 0 &&
+                       self.ThePomoshTimer.timeRemaining <= 5 &&
+                       self.ThePomoshTimer.timeRemaining >= 2 {
+                        if self.ThePomoshTimer.timeRemaining == 5 {
+                            (NSApp.delegate as! AppDelegate).showPopover()
+                        }
+                        if self.ThePomoshTimer.playSound {
+                            NSSound(named: "Tink")?.play()
+                        }
                     }
                 }
 
@@ -257,14 +261,7 @@ struct ContentView: View {
                     }
 
                     self.ThePomoshTimer.isActive = false
-
-                    // Mark active task as done when all cycles complete
-                    if let task = self.activeTask {
-                        task.status = .done
-                        task.completedAt = Date()
-                        try? modelContext.save()
-                        self.activeTask = nil
-                    }
+                    self.activeTask = nil
                 }
             }
             .frame(minWidth: 0, maxWidth: .infinity, minHeight: 0, maxHeight: .infinity, alignment: .center)
@@ -358,7 +355,7 @@ struct ContentView: View {
                             settings.set(newValue, forKey: "time")
                             self.ThePomoshTimer.fulltime = Int(newValue)
                         }
-                    ), in: 1200 ... 3600, step: 300)
+                    ), in: 300 ... 3600, step: 300)
 
                     Text("Break Time:  \(self.ThePomoshTimer.fullBreakTime / 60) minute")
                         .font(.custom("Space Mono Regular", size: 12))
