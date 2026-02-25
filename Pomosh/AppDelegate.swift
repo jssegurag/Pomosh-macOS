@@ -9,6 +9,7 @@
 import AppKit
 import Cocoa
 // import HotKey
+import SwiftData
 import SwiftUI
 import UserNotifications
 
@@ -19,6 +20,7 @@ import UserNotifications
 class AppDelegate: NSObject, NSApplicationDelegate {
     @ObservedObject var PoTimer = PomoshTimer()
     var popover: NSPopover!
+    var globalHotkeyMonitor: Any?
     let invisibleWindow = NSWindow(contentRect: NSMakeRect(0, 0, 20, 5), styleMask: .borderless, backing: .buffered, defer: false)
 
     var statusBarItem: NSStatusItem! = NSStatusBar.system.statusItem(withLength: CGFloat(NSStatusItem.variableLength + (PomoshTimer().showMenubarTimer ? 70 : 0)))
@@ -39,6 +41,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         invisibleWindow.backgroundColor = .red
         invisibleWindow.alphaValue = 0
         let contentView = ContentView()
+            .modelContainer(for: [PomodoroSession.self, PomodoroTask.self])
 
         let popover = NSPopover()
         popover.contentSize = NSSize(width: 400, height: 400)
@@ -60,6 +63,16 @@ class AppDelegate: NSObject, NSApplicationDelegate {
 
             button.action = #selector(togglePopover(_:))
             button.sendAction(on: [.leftMouseUp, .rightMouseUp])
+        }
+
+        // Global hotkey: Cmd+Ctrl+P toggles play/pause
+        globalHotkeyMonitor = NSEvent.addGlobalMonitorForEvents(matching: .keyDown) { [weak self] event in
+            guard let self = self else { return }
+            if event.modifierFlags.contains([.command, .control]) && event.keyCode == 35 {
+                DispatchQueue.main.async {
+                    self.PoTimer.isActive.toggle()
+                }
+            }
         }
     }
 
@@ -100,7 +113,8 @@ class AppDelegate: NSObject, NSApplicationDelegate {
 
         } else if event.type == NSEvent.EventType.rightMouseUp {
             let menu = NSMenu()
-            menu.addItem(NSMenuItem(title: "Pomosh v1.0.6", action: nil, keyEquivalent: ""))
+            let version = Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "1.0.7"
+            menu.addItem(NSMenuItem(title: "Pomosh v\(version)", action: nil, keyEquivalent: ""))
             menu.addItem(NSMenuItem.separator())
             menu.addItem(NSMenuItem(title: "Give ⭐️", action: #selector(giveStar), keyEquivalent: "s"))
             menu.addItem(withTitle: "About", action: #selector(about), keyEquivalent: "a")
