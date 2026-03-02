@@ -18,7 +18,7 @@ struct ContentView: View {
     @State private var runnedRounds = 0
     @State private var currentTaskName: String = ""
     @State private var activeTask: PomodoroTask? = nil
-    @ObservedObject var ThePomoshTimer = PomoshTimer()
+    @ObservedObject var ThePomoshTimer = PomoshTimer.shared
     @ObservedObject var themeManager = ThemeManager.shared
     @ObservedObject var ambientManager = AmbientSoundManager.shared
     @Environment(\.modelContext) private var modelContext
@@ -402,6 +402,14 @@ struct ContentView: View {
 
                         Toggle(isOn: $ThePomoshTimer.showMenubarTimer) {
                             Text("Menubar Timer")
+                                .font(.custom("Space Mono Regular", size: 12))
+                        }
+                        .padding(.vertical, 5.0)
+                    }
+
+                    HStack {
+                        Toggle(isOn: $ThePomoshTimer.showFloatingTimer) {
+                            Text("Floating Timer")
                                 .font(.custom("Space Mono Regular", size: 12))
                         }
                         .padding(.vertical, 5.0)

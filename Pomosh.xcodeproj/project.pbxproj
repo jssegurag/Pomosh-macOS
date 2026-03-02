@@ -31,6 +31,8 @@
 		AA000007248039CF00125806 /* StatsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA000008248039CF00125806 /* StatsView.swift */; };
 		BB000001248039CF00125806 /* PomodoroTask.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB000002248039CF00125806 /* PomodoroTask.swift */; };
 		BB000003248039CF00125806 /* TaskBacklogView.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB000004248039CF00125806 /* TaskBacklogView.swift */; };
+		CC000001248039CF00125806 /* FloatingTimerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = CC000002248039CF00125806 /* FloatingTimerView.swift */; };
+		CC000003248039CF00125806 /* FloatingTimerWindowController.swift in Sources */ = {isa = PBXBuildFile; fileRef = CC000004248039CF00125806 /* FloatingTimerWindowController.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXCopyFilesBuildPhase section */
@@ -73,6 +75,8 @@
 		AA000008248039CF00125806 /* StatsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StatsView.swift; sourceTree = "<group>"; };
 		BB000002248039CF00125806 /* PomodoroTask.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PomodoroTask.swift; sourceTree = "<group>"; };
 		BB000004248039CF00125806 /* TaskBacklogView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TaskBacklogView.swift; sourceTree = "<group>"; };
+		CC000002248039CF00125806 /* FloatingTimerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FloatingTimerView.swift; sourceTree = "<group>"; };
+		CC000004248039CF00125806 /* FloatingTimerWindowController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FloatingTimerWindowController.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -105,6 +109,8 @@
 				0AC4C39024803A4500125806 /* AboutView.swift */,
 				AA000008248039CF00125806 /* StatsView.swift */,
 				BB000004248039CF00125806 /* TaskBacklogView.swift */,
+				CC000002248039CF00125806 /* FloatingTimerView.swift */,
+				CC000004248039CF00125806 /* FloatingTimerWindowController.swift */,
 			);
 			path = Views;
 			sourceTree = "<group>";
@@ -283,6 +289,8 @@
 				AA000007248039CF00125806 /* StatsView.swift in Sources */,
 				BB000001248039CF00125806 /* PomodoroTask.swift in Sources */,
 				BB000003248039CF00125806 /* TaskBacklogView.swift in Sources */,
+				CC000001248039CF00125806 /* FloatingTimerView.swift in Sources */,
+				CC000003248039CF00125806 /* FloatingTimerWindowController.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
